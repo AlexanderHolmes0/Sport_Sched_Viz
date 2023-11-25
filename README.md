@@ -1,4 +1,4 @@
-# Sports_Sched_Viz
+# Sport_Sched_Viz
 Visualize a sports schedule (could be your own!)
 
 ![](https://github.com/AlexanderHolmes0/Sports_Sched_Viz/blob/main/Sample.png)
