@@ -103,7 +103,7 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
 
 
 server <- function(input, output) {
-  set_token("pk.eyJ1IjoiYWxleGFuZGVyaG9sbWVzMCIsImEiOiJjbHBkNTk1dWkwMTJjMmtxejQ2Z3R6aXFuIn0.9tEJPCxyKZEt13dQjR5LqQ")
+  set_token("YourToken")
   observeEvent(input$reset, { 
     refresh()
   })
