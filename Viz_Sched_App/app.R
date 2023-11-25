@@ -36,6 +36,36 @@ ui <- page_sidebar(
       }
     "
   ),
+  tags$head(HTML(
+    '<!-- Quick & Dirty HTML Meta Tags -->
+<title>Sports Schedule Viz</title>
+<meta name="description" content="Visualize Your Own Team Schedule!">
+
+<!-- Google / Search Engine Tags -->
+<meta itemprop="name" content="Sports Schedule Viz">
+<meta itemprop="description" content="Visualize Your Own Team Schedule!">
+<meta itemprop="image" content="https://github.com/AlexanderHolmes0/Sports_Sched_Viz/blob/main/Sample.png">
+
+<!-- Google / Search Engine Tags -->
+<meta name="title" content="Sports Schedule Viz">
+<meta name="description" content="Visualize Your Own Team Schedule!">
+<meta name="image" content="https://github.com/AlexanderHolmes0/Sports_Sched_Viz/blob/main/Sample.png">
+
+<!-- Facebook Meta Tags -->
+<meta property="og:url" content="https://aholmes25.shinyapps.io/Viz_Sched_App/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Sports Schedule Viz">
+<meta property="og:description" content="Visualize Your Own Team Schedule!">
+<meta property="og:image" content="https://github.com/AlexanderHolmes0/Sports_Sched_Viz/blob/main/Sample.png">
+
+<!-- Twitter Meta Tags -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://aholmes25.shinyapps.io/Viz_Sched_App/">
+<meta name="twitter:title" content="Sports Schedule Viz">
+<meta name="twitter:description" content="Visualize Your Own Team Schedule!">
+<meta name="twitter:image" content="https://github.com/AlexanderHolmes0/Sports_Sched_Viz/blob/main/Sample.png">'),
+
+tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Travel%20and%20places/World%20Map.png")),
   useShinyjs(),
   title = "Sport Schedule Viz", 
   theme = bs_theme( bootswatch  = 'lux'),
@@ -73,7 +103,7 @@ ui <- page_sidebar(
 
 
 server <- function(input, output) {
-  set_token("YourMapBoxToken")
+  set_token("pk.eyJ1IjoiYWxleGFuZGVyaG9sbWVzMCIsImEiOiJjbHBkNTk1dWkwMTJjMmtxejQ2Z3R6aXFuIn0.9tEJPCxyKZEt13dQjR5LqQ")
   observeEvent(input$reset, { 
     refresh()
   })
