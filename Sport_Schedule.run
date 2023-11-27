@@ -1,0 +1,18 @@
+model Sports_Sched.mod;
+data Sports_Data.dat;
+option solver gurobi;
+solve;
+display x;
+
+set TeamNames := {'CAN', 'ICE', 'SWE', 'RUS', 'DEN', 'JAP', 'ANT', 'AUS', 'CHI', 'ARG', 'TAH', 'FIJ'} ordered;
+
+for {l in 1..L} {
+	#printf "week %d\n",l;
+		for {i in 1..I}{
+			for {j in 1..J}{
+				if x[i,j,l] = 1 then
+					printf "%s %s %d \n", member(i,TeamNames),member(j,TeamNames),l;
+			}
+		}
+	}
+	
