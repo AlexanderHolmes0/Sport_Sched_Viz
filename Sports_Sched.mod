@@ -19,7 +19,7 @@ var y {i in 1..I, l in 1..8} binary; #back to back travel games
 minimize TotalDistance:
      sum{i in 1..I, j in 1..J, l in 1..L}
         x[i, j, l] * d[i, j] +
-        10000 * (sum{i in 1..I, l in 1..8} y[i,l]);
+        1000000 * (sum{i in 1..I, l in 1..8} y[i,l]);
         
 	
 #Play everyone once in your division and three teams in the other division selected “randomly” – 
@@ -85,15 +85,15 @@ subject to Away{j in 1..J}:
 	sum{i in 1..I,l in 1..L} x[i,j,l] = 4;   
 
 
-subject to YDeFINE {i in 1..I, l in 1..L-1}:
+subject to YDEFINE {i in 1..I, l in 1..L-1}:
 	sum{j in 1..J} (x[i,j,l] + x[i,j,l+1]) + y[i,l] >= 1;
 
-subject to NoBack2BackAway {i in 1..I}:
+subject to NoMoreThan1Back2BackAway {i in 1..I}:
 	sum{l in 1..L-1} y[i,l] <= 1;
 
 #No back to back away games first 2 weeks
 subject to NoAwayF2{i in 1..I}:
-	sum{l in 1..2, j in 1..12} (x[i,j,l]) >= 1;
+	sum{l in 1..3, j in 1..12} (x[i,j,l]) >= 1;
 
 #No back to back away games last 2 weeks
 subject to NoAwayL2{i in 1..I}:
