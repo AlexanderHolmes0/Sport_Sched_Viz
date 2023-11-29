@@ -13,13 +13,12 @@ param Smax>=0;# end index for south
 #variable declaration
 var x {i in 1..I, j in 1..J, l in 1..L} binary; #games I hosts J in week L:
 
-var y {i in 1..I, l in 1..8} binary; #back to back travel games
-
+var y {i in 1..I, l in 1..8} binary; #back to back travel games 
 
 minimize TotalDistance:
      sum{i in 1..I, j in 1..J, l in 1..L}
         x[i, j, l] * d[i, j] +
-        1000000 * (sum{i in 1..I, l in 1..8} y[i,l]);
+        (sum{i in 1..I, l in 1..8} y[i,l]);
         
 	
 #Play everyone once in your division and three teams in the other division selected “randomly” – 
@@ -33,6 +32,15 @@ minimize TotalDistance:
 #   while some other team gets a “bad” schedule
 #-	Make the “out of division” schedule as travel “friendly” as possible
 
+#-  average distance over all weeks for a specific no more than x amount
+# min the difference between the best and worst 
+
+#1. Calculate average distance from all opponents for a team (d matrix)
+#2. Calculate average distance from opponents during this season for a team (4 games)
+#3. Divide 2. / 1.
+#4. Take the max value of 3 from a team in the league MINUS the min value of 3 from a team in the league
+#5. Try to min the difference in 4
+
 #hard constraints     
 
 #each north plays north once;
@@ -42,13 +50,13 @@ subject to NorthNorth1X {i in 1..S-1, j in i+1..S}:
 #each south plays south once;
 subject to SouthSouth1X {i in Smin..Smax-1, j in i+1..Smax}: 
      sum{l in 1..L} (x[i,j,l]+x[j,i,l]) = 1;
-     
+
 #Every north team plays a different south team three times
 subject to NorthSouth3x {i in 1..S}:
 	 sum{l in 1..L, j in Smin..Smax} (x[i,j,l]+x[j,i,l]) = 3;
 	 
 #Play at a max each opponent once
-subject to DifferentGames{i in 1..J, j in 1..J: i<>j}:
+subject to DifferentGames{i in 1..I, j in 1..J: i<>j}:
 	sum{l in 1..L} (x[i,j,l] + x[j,i,l]) <= 1;
 	
 # team 1 per week max 1 match
@@ -82,22 +90,19 @@ subject to SouthGamesPerTeamInDiv3x {i in Smin..Smax}:
      
 #4 away games
 subject to Away{j in 1..J}:
-	sum{i in 1..I,l in 1..L} x[i,j,l] = 4;   
-
-
+	sum{i in 1..I,l in 1..L} x[i,j,l] = 4;  
+	 
+#force y to be 1 when there are back2back away games for a team
 subject to YDEFINE {i in 1..I, l in 1..L-1}:
 	sum{j in 1..J} (x[i,j,l] + x[i,j,l+1]) + y[i,l] >= 1;
-
+	
+#make each row in y equal to 1 or less
 subject to NoMoreThan1Back2BackAway {i in 1..I}:
 	sum{l in 1..L-1} y[i,l] <= 1;
 
-#No back to back away games first 2 weeks
-subject to NoAwayF2{i in 1..I}:
-	sum{l in 1..3, j in 1..12} (x[i,j,l]) >= 1;
-
-#No back to back away games last 2 weeks
-subject to NoAwayL2{i in 1..I}:
-	sum{l in 8..9, j in 1..12} (x[i,j,l]) >= 1;
+#No back to back away games first and last 2 weeks
+subject to NoAwayF2:
+	sum{i in 1..I} (y[i,1]+y[i,8]) = 0;
 
 #no byes first 2 weeks
 subject to noByeFirst2{l in 1..2}:
