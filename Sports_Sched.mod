@@ -7,7 +7,7 @@ param S>=0; #num players in north
 param d {i in 1..I, j in 1..J} >= 0; #distances
 param Smin>=0; #start index for south
 param Smax>=0;# end index for south
-
+param avgD {i in 1..I}>=0; #avg distance each country is from others
 
 
 #variable declaration
@@ -15,11 +15,28 @@ var x {i in 1..I, j in 1..J, l in 1..L} binary; #games I hosts J in week L:
 
 var y {i in 1..I, l in 1..8} binary; #back to back travel games 
 
+var avgDinSzn {j in 1..J};
+
+var ratio {j in 1..J};
+
 minimize TotalDistance:
      sum{i in 1..I, j in 1..J, l in 1..L}
         x[i, j, l] * d[i, j] +
         (sum{i in 1..I, l in 1..8} y[i,l]);
         
+ 
+ minimize RatioDifference:
+ 	(max{j in 1..J} ratio[j]) - (min{j in 1..J} ratio[j]);
+
+
+subject to avgDinSznDEFINE{j in 1..J}:
+	sum{l in 1..L,i in 1..I} (x[i, j, l] * d[i, j])/4 = avgDinSzn[j];
+
+subject to ratioDEFINE{j in 1..J}:
+	avgDinSzn[j]/avgD[j] = ratio[j];
+
+subject to RatioBetter:
+	 min{j in 1..J} ratio[j]  >= .6;
 	
 #Play everyone once in your division and three teams in the other division selected “randomly” – 
 	#total of eight games (will not play three opponents) - done.
