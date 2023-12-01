@@ -6,6 +6,8 @@ library(shinycssloaders)
 library(DT)
 library(shinyjs)
 library(toastui)
+library(spsComps)
+
 light <- bs_theme(preset = 'yeti')
 
 data <- read.table("Sports_Sched.txt",
@@ -172,11 +174,15 @@ server <- function(input, output) {
   
   output$distPlot <- renderUI({
     req(map_data())
+    validate(
+      need(!is.na(map_data()), "Please select a different week/team")
+    )
     mapdeck(
       style = mapdeck_style("outdoors"),
       pitch = input$pitch,
       location = c(-3,-1.5),
       zoom = 1.2,
+      min_zoom=1.2,
       padding = 0,
       height = '70vh') %>%
       add_animated_arc(
