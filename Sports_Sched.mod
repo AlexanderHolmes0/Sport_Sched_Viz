@@ -15,28 +15,55 @@ var x {i in 1..I, j in 1..J, l in 1..L} binary; #games I hosts J in week L:
 
 var y {i in 1..I, l in 1..8} binary; #back to back travel games 
 
-var avgDinSzn {j in 1..J};
+#var avgDinSznConferN {j in 1..S};
 
-var ratio {j in 1..J};
+#var avgDinSznConferS {j in Smin..Smax};
+
+#var ratio {j in 1..J};
+
+var DinSzn{j in 1..J}>=0;
+
+var MaximumDTravel>=0;
+
+var MinDTravel>=0;
 
 minimize TotalDistance:
      sum{i in 1..I, j in 1..J, l in 1..L}
         x[i, j, l] * d[i, j] +
-        (sum{i in 1..I, l in 1..8} y[i,l]);
-        
- 
- minimize RatioDifference:
- 	(max{j in 1..J} ratio[j]) - (min{j in 1..J} ratio[j]);
+        (sum{i in 1..I, l in 1..8} y[i,l]) ;
+
+	
+subject to DinSznDEFINE{j in 1..J}:
+	sum{l in 1..L,i in 1..I} (x[i, j, l] * d[i, j]) = DinSzn[j];
 
 
-subject to avgDinSznDEFINE{j in 1..J}:
-	sum{l in 1..L,i in 1..I} (x[i, j, l] * d[i, j])/4 = avgDinSzn[j];
 
-subject to ratioDEFINE{j in 1..J}:
-	avgDinSzn[j]/avgD[j] = ratio[j];
+#subject to MaxTravelDefine{j in 1..J}:
+#	DinSzn[j] <= MaximumDTravel;
 
-subject to RatioBetter:
-	 min{j in 1..J} ratio[j]  >= .6;
+#subject to MinTravelDefine{j in 1..J}:
+#	DinSzn[j] >= MinDTravel;
+
+#subject to ConstrainTheD:
+#	MaximumDTravel <= 4000;
+	
+#subject to ConstrainTheMinD:
+#	MinDTravel >=2800;
+
+#subject to BottomD{j in 1..J}:
+#	DinSzn[j] >= 2500;
+	
+#subject to avgDinSznConferNDEFINE{j in 1..S}:
+	#sum{l in 1..L,i in 1..S} (x[i, j, l] * d[i, j]) = avgDinSznConferN[j];
+
+#subject to avgDinSznConferSDEFINE{j in Smin..Smax}:
+	#sum{l in 1..L,i in Smin..Smax} (x[i, j, l] * d[i, j]) = avgDinSznConferS[j];
+
+#subject to ratioDEFINE{j in 1..J}:
+#	avgDinSzn[j]/avgD[j] = ratio[j];
+
+#subject to RatioBetter:
+#	min{j in 1..J} ratio[j]  >= .6;
 	
 #Play everyone once in your division and three teams in the other division selected “randomly” – 
 	#total of eight games (will not play three opponents) - done.
@@ -144,5 +171,4 @@ subject to MaxTvRev{l in 1..L-1}:
 	x[3,5,l] + x[5,3,l] + x[3,5,l+1] + x[5,3,l+1] +#Sweden/Denamrk
 	x[9,10,l] + x[10,9,l] + x[9,10,l+1] + x[10,9,l+1]+ #Chile/Argentina
 	x[7,8,l] + x[8,7,l] + x[7,8,l+1] + x[8,7,l+1] <= 1; #Australia/Antarctica
-
 

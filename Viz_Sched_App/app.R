@@ -5,13 +5,14 @@ library(mapdeck)
 library(shinycssloaders)
 library(DT)
 library(shinyjs)
-
-light <- bs_theme()
+library(toastui)
+light <- bs_theme(preset = 'yeti')
 
 data <- read.table("Sports_Sched.txt",
   sep = "", col.names = c("Home", "Away", "Week"), header = F,
   na.strings = "", stringsAsFactors = F
 )
+
 
 # Create a dataframe with latitude and longitude for cities
 cities <- c("CAN", "ICE", "SWE", "RUS", "DEN", "JAP", "ANT", "AUS", "CHI", "ARG", "TAH", "FIJ")
@@ -23,8 +24,13 @@ to_plot <- left_join(data, locations, by = c("Home" = "cities")) |>
   left_join(locations, by = c("Away" = "cities")) |>
   rename("lat.home" = latitude.x, "long.home" = longitude.x, lat.away = latitude.y, long.away = longitude.y) |> 
   mutate(game_num=1:nrow(data),
-         info=paste0("<b>",Home, " - ", Away, "</b>"))
-
+         info=paste0("<b>",Home, " - ", Away, "</b>")) |> 
+  arrange(Away,Week)# |> 
+  #mutate(b2bgames=ifelse(Week-lag(Week,default=1)==1,1,0), 
+  #       lat.away = ifelse(b2bgames==1,lag(lat.home),lat.away),
+  #       long.away = ifelse(b2bgames==1,lag(long.home),long.away)) |> 
+  #arrange(game_num)
+ 
 ## set your mapbox token here
 
 
@@ -87,25 +93,28 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
       ),
       sliderInput('week', 'Match Weeks', min = 1, max = 9,value=c(1,9),step = 1,animate = animationOptions(interval = 3000, loop = TRUE))
       ,
-      sliderInput('pitch', 'Map Viewing Pitch', min = 0, max = 90, value = 45, step = 1,ticks = FALSE),
+      sliderInput('pitch', 'Map Viewing Pitch', min = 0, max = 90, value = 30, step = 1,ticks = FALSE),
       fileInput('file','Sport Schedule File',width = '100%',accept = c(".txt")),
-      actionButton("reset", "Reset", icon = icon("refresh")),
-      input_dark_mode()
+      actionButton("reset", "Reset", icon = icon("refresh"))
     ),
   card(full_screen = TRUE,
        style = "resize:vertical;",
     card_header("Route Map"),
     uiOutput("distPlot") |> withSpinner()),
-  card(full_screen = TRUE,
+  # card(full_screen = TRUE,
+  #      style = "resize:vertical;",
+  #   card_header("Schedule"),
+  #   DTOutput("scheduleDT") |> withSpinner()),
+  card(height = '600px',
        style = "resize:vertical;",
-    card_header("Schedule"),
-    DTOutput("scheduleDT") |> withSpinner())
+    datagridOutput("datagrid") |> withSpinner(),fill=T)
 )
 
 
 
 server <- function(input, output) {
   set_token("pk.eyJ1IjoiYWxleGFuZGVyaG9sbWVzMCIsImEiOiJjbHBkNTk1dWkwMTJjMmtxejQ2Z3R6aXFuIn0.9tEJPCxyKZEt13dQjR5LqQ")
+  
   observeEvent(input$reset, { 
     refresh()
   })
@@ -121,13 +130,12 @@ server <- function(input, output) {
              left_join(locations, by = c("Home" = "cities")) |>
              left_join(locations, by = c("Away" = "cities")) |>
              rename("lat.home" = latitude.x, "long.home" = longitude.x, lat.away = latitude.y, long.away = longitude.y) |> 
-             mutate(info=paste0("<b>", Home, " - ", Away, "</b>")),
+             mutate(info=paste0("<b>",Home, " - ", Away, "</b>")),
            validate("Invalid file; Please upload a .txt file")
     )
   })
   
   map_data <- reactive({
-    Sys.sleep(1)
     req(to_plot)
     if(is.null(input$file)) {
       m1 <- to_plot
@@ -152,7 +160,7 @@ server <- function(input, output) {
     
     to_mod2$long.away <- ifelse(diff > 180 & to_mod2$long.away >0, to_mod2$long.away - 360, 
                                 ifelse(diff>180 & to_mod2$long.away <0, to_mod2$long.away + 360, to_mod2$long.away))
-    print(rbind(to_mod1, to_mod2))
+    #print(rbind(to_mod1, to_mod2))
     rbind(to_mod1, to_mod2)
   })
   
@@ -167,8 +175,10 @@ server <- function(input, output) {
     mapdeck(
       style = mapdeck_style("outdoors"),
       pitch = input$pitch,
-      height = "80vh",
-      zoom = 50) %>%
+      location = c(-3,-1.5),
+      zoom = 1.2,
+      padding = 0,
+      height = '70vh') %>%
       add_animated_arc(
         data = map_data(),
         origin = c("long.away", "lat.away"),
@@ -182,11 +192,11 @@ server <- function(input, output) {
         tooltip = "info",
         auto_highlight = TRUE,
         legend = TRUE,
+        update_view = FALSE,
         legend_options = list(
           stroke_from = list(title = "Travel Team"), stroke_to = list(title = "Home Team"),
           css = "max-height: 200px;"
-        )
-      ) |> 
+        )) |> 
       add_arc(
         data = map_data(),
         origin = c("long.away", "lat.away"),
@@ -197,10 +207,40 @@ server <- function(input, output) {
         stroke_from_opacity = 100,
         stroke_to_opacity = 100,
         stroke_width = 3,
+        update_view = FALSE,
         tooltip = "info",
         auto_highlight = TRUE
       )
   })
+  
+  output$datagrid <- renderDatagrid({
+    
+    if(is.null(input$file)) {
+      gridData <- data
+    }else{
+      gridData <- uploaded_data() |> 
+        select(Home, Away, Week)
+    }
+    
+    result_wide <- pivot_wider(gridData,names_from = Week, values_from = c(Away))
+    result_wide2 <- pivot_wider(gridData, names_from = Week, values_from = c(Home))
+    colnames(result_wide2)[1] <- c("Home")
+    combined <- rows_patch(result_wide,result_wide2,by=c("Home"),unmatched = 'ignore')
+    colnames(combined)[1] <- c("Team")
+    
+    datagrid(combined,bodyHeight = "auto") |> 
+      grid_style_cell(`1` %in% result_wide2$`1`,column = c("1"), background = "#F78132") |> 
+      grid_style_cell(`2` %in% result_wide2$`2`,column = c("2"), background = "#F78132") |>
+      grid_style_cell(`3` %in% result_wide2$`3`[!is.na(result_wide2$`3`)],column = c("3"), background = "#F78132") |>
+      grid_style_cell(`4` %in% result_wide2$`4`[!is.na(result_wide2$`4`)],column = c("4"), background = "#F78132") |>
+      grid_style_cell(`5` %in% result_wide2$`5`[!is.na(result_wide2$`5`)],column = c("5"), background = "#F78132") |>
+      grid_style_cell(`6` %in% result_wide2$`6`[!is.na(result_wide2$`6`)],column = c("6"), background = "#F78132") |>
+      grid_style_cell(`7` %in% result_wide2$`7`[!is.na(result_wide2$`7`)],column = c("7"), background = "#F78132") |>
+      grid_style_cell(`8` %in% result_wide2$`8`[!is.na(result_wide2$`8`)],column = c("8"), background = "#F78132") |>
+      grid_style_cell(`9` %in% result_wide2$`9`[!is.na(result_wide2$`9`)],column = c("9"), background = "#F78132") |> 
+      grid_style_column("Team", background = "#f9f9f9")
+  })
+  
 }
 
 # Run the application
