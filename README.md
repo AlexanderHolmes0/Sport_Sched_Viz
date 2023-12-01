@@ -18,4 +18,4 @@ Teams can be any of the following:
 
 > `CAN` `ICE` `SWE` `RUS` `DEN` `JAP` `ANT` `AUS` `CHI` `ARG` `TAH` `FIJ`
 
-Your Schedule Must Match These Abbreviations
+Your Schedule Must Match These Abbreviations and have `9` weeks
