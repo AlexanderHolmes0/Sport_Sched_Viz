@@ -10,7 +10,7 @@ library(spsComps)
 
 light <- bs_theme(preset = 'yeti')
 
-data <- read.table("Sports_Sched.txt",
+data <- read.table("Sports_Sched_Distance_Constrained.txt",
   sep = "", col.names = c("Home", "Away", "Week"), header = F,
   na.strings = "", stringsAsFactors = F
 )
@@ -78,9 +78,8 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
   useShinyjs(),
   title = "Sport Schedule Viz", 
   theme = light,
-  fillable_mobile = TRUE,
   fillable = FALSE,
-  sidebar =sidebar(
+  sidebar =sidebar(width=300,
       title = "Map Controls",
       selectInput(
         "Team", "Select Team(s)",
@@ -99,18 +98,21 @@ tags$link(rel = "shortcut icon", href = "https://raw.githubusercontent.com/Tarik
       fileInput('file','Sport Schedule File',width = '100%',accept = c(".txt")),
       actionButton("reset", "Reset", icon = icon("refresh"))
     ),
-  card(full_screen = TRUE,
-       style = "resize:vertical;",
+  card(
+       min_height = '682px',
+       #style = "max-width: 1342px;",
     card_header("Route Map"),
-    uiOutput("distPlot") |> withSpinner()),
+    mapdeckOutput("distPlot",height = '598' ) |> withSpinner()),
   # card(full_screen = TRUE,
   #      style = "resize:vertical;",
   #   card_header("Schedule"),
   #   DTOutput("scheduleDT") |> withSpinner()),
-  card(height = '600px',
-       style = "resize:vertical;",
-    datagridOutput("datagrid") |> withSpinner(),fill=T)
+  card(height = 650,
+    card_header("Schedule"),
+    datagridOutput("datagrid") |> withSpinner(),
+    card_footer(class = "fs-6",img(src="green.png")," = Away"))
 )
+
 
 
 
@@ -172,50 +174,41 @@ server <- function(input, output) {
   })
     #to_plot |> select(Home, Away, Week) |> DT::datatable()})
   
-  output$distPlot <- renderUI({
+  output$distPlot <- renderMapdeck({
+    Sys.sleep(0.5)
+    
     req(map_data())
     validate(
       need(!is.na(map_data()), "Please select a different week/team")
     )
+
     mapdeck(
       style = mapdeck_style("outdoors"),
       pitch = input$pitch,
       location = c(-3,-1.5),
       zoom = 1.2,
       min_zoom=1.2,
-      padding = 0,
-      height = '70vh') %>%
-      add_animated_arc(
-        data = map_data(),
-        origin = c("long.away", "lat.away"),
-        destination = c("long.home", "lat.home"),
-        layer_id = "arcs",
-        stroke_from = "Away",
-        stroke_to = "Home",
-        stroke_from_opacity = 1000,
-        stroke_to_opacity = 1000,
-        stroke_width = 5,
-        tooltip = "info",
-        auto_highlight = TRUE,
-        legend = TRUE,
-        update_view = FALSE,
-        legend_options = list(
-          stroke_from = list(title = "Travel Team"), stroke_to = list(title = "Home Team"),
-          css = "max-height: 200px;"
-        )) |> 
-      add_arc(
-        data = map_data(),
-        origin = c("long.away", "lat.away"),
-        destination = c("long.home", "lat.home"),
-        layer_id = "arcs_static",
-        stroke_from = "Away",
-        stroke_to = "Home",
-        stroke_from_opacity = 100,
-        stroke_to_opacity = 100,
-        stroke_width = 3,
-        update_view = FALSE,
-        tooltip = "info",
-        auto_highlight = TRUE
+
+      padding = 0) %>%
+      add_animated_line(
+        data = map_data()
+        , layer_id = "line_layer"
+        , origin = c("long.away", "lat.away")
+        , destination = c("long.home", "lat.home")
+        , stroke_colour = "Away"
+        , stroke_width = 3
+        , auto_highlight = TRUE
+        , trail_length = .5
+        , animation_speed = .25
+        ,legend = TRUE
+        ,palette = t(col2rgb(RColorBrewer::brewer.pal(n = 12,name = 'Paired')))
+        ,update_view = FALSE
+        ,tooltip = 'info'
+        ,legend_options = list(
+          stroke_colour = list(title = "Team"),
+          css = "max-height: 300px;
+          opacity: 0.8;"
+        )
       )
   })
   
@@ -234,17 +227,21 @@ server <- function(input, output) {
     combined <- rows_patch(result_wide,result_wide2,by=c("Home"),unmatched = 'ignore')
     colnames(combined)[1] <- c("Team")
     
-    datagrid(combined,bodyHeight = "auto") |> 
-      grid_style_cell(`1` %in% result_wide2$`1`,column = c("1"), background = "#F78132") |> 
-      grid_style_cell(`2` %in% result_wide2$`2`,column = c("2"), background = "#F78132") |>
-      grid_style_cell(`3` %in% result_wide2$`3`[!is.na(result_wide2$`3`)],column = c("3"), background = "#F78132") |>
-      grid_style_cell(`4` %in% result_wide2$`4`[!is.na(result_wide2$`4`)],column = c("4"), background = "#F78132") |>
-      grid_style_cell(`5` %in% result_wide2$`5`[!is.na(result_wide2$`5`)],column = c("5"), background = "#F78132") |>
-      grid_style_cell(`6` %in% result_wide2$`6`[!is.na(result_wide2$`6`)],column = c("6"), background = "#F78132") |>
-      grid_style_cell(`7` %in% result_wide2$`7`[!is.na(result_wide2$`7`)],column = c("7"), background = "#F78132") |>
-      grid_style_cell(`8` %in% result_wide2$`8`[!is.na(result_wide2$`8`)],column = c("8"), background = "#F78132") |>
-      grid_style_cell(`9` %in% result_wide2$`9`[!is.na(result_wide2$`9`)],column = c("9"), background = "#F78132") |> 
-      grid_style_column("Team", background = "#f9f9f9")
+    gridNames <- c('Team',paste0('Week ',1:max(gridData$Week)))
+    
+    datagrid(combined,filters = T,bodyHeight='auto',draggable = T,colnames = gridNames) |> 
+      grid_style_cell(`1` %in% result_wide2$`1`,column = c("1"), background = "#e2ecbd") |> 
+      grid_style_cell(`2` %in% result_wide2$`2`,column = c("2"), background = "#e2ecbd") |>
+      grid_style_cell(`3` %in% result_wide2$`3`[!is.na(result_wide2$`3`)],column = c("3"), background = "#e2ecbd") |>
+      grid_style_cell(`4` %in% result_wide2$`4`[!is.na(result_wide2$`4`)],column = c("4"), background = "#e2ecbd") |>
+      grid_style_cell(`5` %in% result_wide2$`5`[!is.na(result_wide2$`5`)],column = c("5"), background = "#e2ecbd") |>
+      grid_style_cell(`6` %in% result_wide2$`6`[!is.na(result_wide2$`6`)],column = c("6"), background = "#e2ecbd") |>
+      grid_style_cell(`7` %in% result_wide2$`7`[!is.na(result_wide2$`7`)],column = c("7"), background = "#e2ecbd") |>
+      grid_style_cell(`8` %in% result_wide2$`8`[!is.na(result_wide2$`8`)],column = c("8"), background = "#e2ecbd") |>
+      grid_style_cell(`9` %in% result_wide2$`9`[!is.na(result_wide2$`9`)],column = c("9"), background = "#e2ecbd") |> 
+      grid_style_column("Team", background = scales::col_factor("Paired", domain = NULL,alpha = 8)(Team),fontWeight = "bold",
+                        color = ifelse(Team%in%c('RUS',"DEN",'ARG'),"white","black")
+                        )
   })
   
 }
