@@ -18,8 +18,8 @@ data <- read.table("Sports_Sched_Distance_Constrained.txt",
 
 # Create a dataframe with latitude and longitude for cities
 cities <- c("CAN", "ICE", "SWE", "RUS", "DEN", "JAP", "ANT", "AUS", "CHI", "ARG", "TAH", "FIJ")
-latitude <- c(45.4247, 64.1467, 59.3294, 55.7558, 55.6761, 35.6897, -85, -35.2931, 39.9040, -34.5997, -17.5334, -18.1416)
-longitude <- c(-75.6950, -21.9400, 18.0686, 37.6178, 12.5683, 139.6922, 0, 149.1269, 116.4075, -58.3819, -149.5667, 178.4419)
+latitude <- c(45.4247, 64.1467, 59.3294, 55.7558, 55.6761, 35.6897, -85, -35.2931, -33.45, -34.5997, -17.5334, -18.1416)
+longitude <- c(-75.6950, -21.9400, 18.0686, 37.6178, 12.5683, 139.6922, 0, 149.1269, -70.67, -58.3819, -149.5667, 178.4419)
 locations <- data.frame(cities, latitude, longitude)
 
 to_plot <- left_join(data, locations, by = c("Home" = "cities")) |>
@@ -165,7 +165,11 @@ server <- function(input, output) {
     to_mod2$long.away <- ifelse(diff > 180 & to_mod2$long.away >0, to_mod2$long.away - 360, 
                                 ifelse(diff>180 & to_mod2$long.away <0, to_mod2$long.away + 360, to_mod2$long.away))
     #print(rbind(to_mod1, to_mod2))
-    rbind(to_mod1, to_mod2)
+    
+    Team_Colors <- data.frame(Away = sort(cities), color = RColorBrewer::brewer.pal(n = 12,name = 'Paired'))
+    
+    rbind(to_mod1, to_mod2) |> 
+      left_join(Team_Colors, by = c("Away"))
   })
   
   output$scheduleDT <- DT::renderDT({
@@ -175,40 +179,45 @@ server <- function(input, output) {
     #to_plot |> select(Home, Away, Week) |> DT::datatable()})
   
   output$distPlot <- renderMapdeck({
-    Sys.sleep(0.5)
     
     req(map_data())
     validate(
       need(!is.na(map_data()), "Please select a different week/team")
     )
-
+    
+    l1 <- legend_element(
+      variables = sort(cities)
+      , colours = RColorBrewer::brewer.pal(n = 12,name = 'Paired')
+      , colour_type = "stroke"
+      , variable_type = "category"
+      , title = "Team"
+      , css = "max-height: 350px;
+          opacity: 0.8;"
+    )
+    
+    js <- mapdeck_legend(l1)
+    
     mapdeck(
       style = mapdeck_style("outdoors"),
       pitch = input$pitch,
       location = c(-3,-1.5),
       zoom = 1.2,
       min_zoom=1.2,
-
       padding = 0) %>%
       add_animated_line(
         data = map_data()
         , layer_id = "line_layer"
         , origin = c("long.away", "lat.away")
         , destination = c("long.home", "lat.home")
-        , stroke_colour = "Away"
+        , stroke_colour = "color"
         , stroke_width = 3
         , auto_highlight = TRUE
         , trail_length = .5
         , animation_speed = .25
-        ,legend = TRUE
-        ,palette = t(col2rgb(RColorBrewer::brewer.pal(n = 12,name = 'Paired')))
+        ,legend = js
+        , palette = t(col2rgb(RColorBrewer::brewer.pal(n = 12,name = 'Paired')))
         ,update_view = FALSE
         ,tooltip = 'info'
-        ,legend_options = list(
-          stroke_colour = list(title = "Team"),
-          css = "max-height: 300px;
-          opacity: 0.8;"
-        )
       )
   })
   
@@ -229,7 +238,7 @@ server <- function(input, output) {
     
     gridNames <- c('Team',paste0('Week ',1:max(gridData$Week)))
     
-    datagrid(combined,filters = T,bodyHeight='auto',draggable = T,colnames = gridNames) |> 
+    datagrid(combined[order(combined$Team),],filters = T,bodyHeight='auto',draggable = T,colnames = gridNames) |> 
       grid_style_cell(`1` %in% result_wide2$`1`,column = c("1"), background = "#e2ecbd") |> 
       grid_style_cell(`2` %in% result_wide2$`2`,column = c("2"), background = "#e2ecbd") |>
       grid_style_cell(`3` %in% result_wide2$`3`[!is.na(result_wide2$`3`)],column = c("3"), background = "#e2ecbd") |>
